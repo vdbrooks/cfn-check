@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import json
 import requests
 import boto3
@@ -6,7 +8,7 @@ template_file = open('top.json')
 template = json.load(template_file)
 template_file.close()
 
-aws_type = ''AWS::CloudFormation::Stack
+aws_type = 'AWS::CloudFormation::Stack'
 
 for resource in template['Resources']:
     health_type = ''
