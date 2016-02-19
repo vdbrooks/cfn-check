@@ -1,0 +1,13 @@
+tests:
+  health-check-type:
+    - ignored-stacks:
+      - Network
+      - IAM
+      - SNS
+  scaling-policies:
+    - ignored-stacks:
+      - Network
+      - IAM
+      - SNS
+    
+
