@@ -1,0 +1,1392 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "Top-Level",
+
+  "Parameters" : {
+    "ProjectName": {
+      "Description": "Project name.",
+      "Type": "String", 
+      "Default": "ExampleClient"
+    },
+    "BastionKey": {
+      "Description": "EC2 keypair for bastion hosts.",
+      "Type": "String",
+      "Default": "bastion"
+    },
+    "CommonKey": {
+      "Description": "Shared EC2 keypair used for all instances except the bastion hosts.",
+      "Type": "String",
+      "Default": "common"
+    },
+    "BootstrapBucket":{
+      "Description":"Name of S3 bucket containing provisioning (bootstrap) scripts.",
+      "Type": "String",
+      "Default": "exampleclient-bootstrap-us-west-1"
+    },
+    "ASGCFNURL":{
+      "Description":"URL for 'ASG' CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/asg.json"
+    },
+    "ASGCentOS7CFNURL":{
+      "Description":"URL for 'ASG for CentOS 7' CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/asg_centos7.json"
+    },
+    "ASGwithELBCFNURL":{
+      "Description":"URL for 'ASG with ELB' CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/asg_and_elb.json"
+    },
+    "ASGwithELBCentOS7CFNURL":{
+      "Description":"URL for 'ASG with ELB for CentOS 7' CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/asg_and_elb_centos7.json"
+    },
+    "ASGwithELBSecondVolumeCFNURL":{
+      "Description":"URL for 'ASG with ELB with second EBS volume' CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/asg_and_elb_second_volume.json"
+    },
+    "ASGwithELBSecondVolumeCentOS7CFNURL":{
+      "Description":"URL for 'ASG with ELB with second EBS volume for CentOS 7' CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/asg_and_elb_second_volume_centos7.json"
+    },
+    "IAMCFNURL":{
+      "Description":"URL for 'IAM' CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/iam.json"
+    },
+    "NATCFNURL":{
+      "Description":"URL for 'NAT' CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/nat.json"
+    },
+    "NetworkCFNURL":{
+      "Description":"URL for 'Network' CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/network.json"
+    },
+    "SecurityGroupCFNURL":{
+      "Description":"URL for 'Security Groups' CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/security_groups.json"
+    },
+    "ECacheCFNURL":{
+      "Description":"URL for 'Security Groups' CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/elastic_cache.json"
+    },
+    "SNSCFNURL":{
+      "Description":"URL for SNS CFN template.",
+      "Type": "String",
+      "Default": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/sns.json"
+    }
+
+  },
+
+  "Mappings" : {
+    "Region2AMI" : {
+      "us-east-1"      : { "64HVMGP2" : "ami-146e2a7c", "64PVStandard" : "ami-8e682ce6" },
+      "us-west-1"      : { "64HVMGP2" : "ami-42908907", "64PVStandard" : "ami-f49089b1" },
+      "us-west-2"      : { "64HVMGP2" : "ami-8f6815bf", "64PVStandard" : "ami-1b3b462b" },
+      "us-central-1"   : { "64HVMGP2" : "ami-b03503ad", "64PVStandard" : "ami-a03503bd" },
+      "eu-west-1"      : { "64HVMGP2" : "ami-dd925baa", "64PVStandard" : "ami-672ce210" },
+      "ap-northeast-1" : { "64HVMGP2" : "ami-df470ede", "64PVStandard" : "ami-25dd9324" },
+      "ap-southeast-1" : { "64HVMGP2" : "ami-82d78bd0", "64PVStandard" : "ami-56b7eb04" },
+      "ap-southeast-2" : { "64HVMGP2" : "ami-91d9bcab", "64PVStandard" : "ami-6bf99c51" },
+      "sa-east-1"      : { "64HVMGP2" : "ami-09cf6014", "64PVStandard" : "ami-c7e649da" }
+    }
+  },
+
+  "Resources" : {
+
+    "IAM": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "IAMCFNURL" },
+        "Parameters": {
+          "CloudtrailS3BucketARN":              "arn:aws:s3:::exampleclient-cloudtrail",
+          "BootstrapS3BucketARN":               "arn:aws:s3:::exampleclient-bootstrap-us-west-1",
+          "SaltMasterS3BucketARN":              "arn:aws:s3:::exampleclient-salt-us-west-1",
+          "JenkinsS3BucketARN":                 "arn:aws:s3:::exampleclient-jenkins-us-west-1",
+          "CodeS3BucketARN":                    "arn:aws:s3:::exampleclient-code-us-west-1",
+	  "LibS3BucketARN":                     "arn:aws:s3:::exampleclient-lib-us-west-1",
+	  "JenkinsDeployNotificationARN":       { "Fn::GetAtt" : [ "SNS", "Outputs.JenkinsDeploy" ] }
+        }
+      }
+    },
+
+    "SNS": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "SNSCFNURL" },
+        "Parameters": {
+          "PrimaryEmailAddress":                "ops@rightbrainnetworks.com",
+          "PrimarySNSDisplayName":              "AWS-ExampleClient",
+          "SaltMasterSNSDisplayName":           "AWS-ExampleClient-SaltMaster",
+          "JenkinsSNSDisplayName":              "AWS-ExampleClient-Jenkins",
+	  "JenkinsDeploySNSDisplayName":        "AWS-ExampleClient-Jenkins-Deploy"
+        }
+      }
+    },
+
+    "Network": {
+      "DependsOn": [ "IAM" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "NetworkCFNURL" },
+          "Parameters": {
+            "ProjectName":                      { "Ref": "ProjectName" },
+            "DomainName":                       "exampleclient.internal"
+          }
+      }
+    },
+
+    "SecurityGroups": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "SecurityGroupCFNURL" },
+        "Parameters": {
+          "ProjectName":                        { "Ref": "ProjectName" },
+          "VPCID" :                             { "Fn::GetAtt" : [ "Network", "Outputs.VPC" ] },
+          "VPCCIDR":                            { "Fn::GetAtt" : [ "Network", "Outputs.VPCSubnet" ] }
+        }
+      }
+    },
+
+    "NAT": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "NATCFNURL" },
+        "Parameters": {
+          "Role":                               "nat",
+          "Environment":                        "mgmt",
+          "InstanceType":                       "t2.small",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "nat.sh",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "gp2",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "2",
+          "MinInstancesCount":                  "1",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.NATInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ManagementPublicAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ManagementPublicAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "Network", "Outputs.NATSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         "common",
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "SaltMaster": {
+      "DependsOn": [ "NAT" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/saltmaster.json",
+        "Parameters": {
+          "IsMultiAZStack":                     "True",
+          "IsELBInternal":                      "True",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "saltmaster",
+          "Environment":                        "mgmt",
+          "InstanceType":                       "t2.medium",
+          "AMI":                                "ami-6bcfc42e",
+          "BootstrapFileName":                  "saltmaster.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "gp2",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "ELB",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "2",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "TCP:4505",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "TCP",
+          "ELBListenerProtocol2":               "TCP",
+          "ELBListenerPort":                    "4505",
+          "ELBListenerPort2":                   "4506",
+          "InstanceListenerProtocol":           "TCP",
+          "InstanceListenerProtocol2":          "TCP",
+          "InstanceListenerPort":               "4505",
+          "InstanceListenerPort2":              "4506",
+          "ELBListenerCert":                    "",
+          "ELBListenerCert2":                   "",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "5",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.SaltMasterInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ManagementAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ManagementAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.SaltSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.ManagementAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.ManagementAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.SaltELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.SaltMaster" ] },
+          "EC2KeyPair":                         "common",
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "Bastion": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "True",
+          "Role":                               "bastion",
+          "Environment":                        "mgmt",
+          "InstanceType":                       "t2.micro",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "bastion.sh",
+          "AssociatePublicIPAddress":           "True",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "gp2",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "EC2",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "2",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ManagementPublicAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ManagementPublicAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.BastionSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "BastionKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+
+
+    "Splunk": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "False",
+          "IsELBInternal":                      "False",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "splunk",
+          "Environment":                        "prod",
+          "InstanceType":                       "t2.small",
+          "AMI":                                "ami-11e80955",
+          "BootstrapFileName":                  "prod-splunk.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "50",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "ELB",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "2",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "HTTP:80/",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "HTTPS",
+          "ELBListenerPort":                    "443",
+          "InstanceListenerProtocol":           "HTTP",
+          "InstanceListenerPort":               "80",
+          "ELBListenerCert":                    "arn:aws:iam::6254927368126:server-certificate/exampleclient-wildcard",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "5",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ManagementAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ManagementAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.SplunkSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.ManagementPublicAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.ManagementPublicAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.SplunkELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+    "Jenkins": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "True",
+          "IsELBInternal":                      "False",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "jenkins",
+          "Environment":                        "mgmt",
+          "InstanceType":                       "t2.small",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "jenkins.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "ELB",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "2",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "HTTP:8080/",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "HTTPS",
+          "ELBListenerPort":                    "443",
+          "InstanceListenerProtocol":           "HTTP",
+          "InstanceListenerPort":               "8080",
+          "ELBListenerCert":                    "arn:aws:iam::6254927368126:server-certificate/exampleclient-wildcard",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "5",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.JenkinsInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ManagementAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ManagementAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.JenkinsSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.ManagementPublicAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.ManagementPublicAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.JenkinsELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Jenkins" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "ProdIonic": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "True",
+          "IsELBInternal":                      "False",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "True",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "ionic",
+          "Environment":                        "prod",
+          "InstanceType":                       "m3.medium",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "prod-ionic.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "ELB",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "4",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "HTTP:80/",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "HTTP",
+          "ELBListenerProtocol2":               "HTTPS",
+          "ELBListenerPort":                    "80",
+          "ELBListenerPort2":                   "443",
+          "InstanceListenerProtocol":           "HTTP",
+          "InstanceListenerProtocol2":          "HTTP",
+          "InstanceListenerPort":               "80",
+          "InstanceListenerPort2":              "80",
+          "ELBListenerCert":                    "",
+          "ELBListenerCert2":                   "arn:aws:iam::6254927368126:server-certificate/exampleclient-wildcard",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "2",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdIonicAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdIonicAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.IonicSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdIonicELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdIonicELBAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.IonicELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "ProdBackend": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "True",
+          "IsELBInternal":                      "False",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "backend",
+          "Environment":                        "prod",
+          "InstanceType":                       "m3.medium",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "prod-backend.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "gp2",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "ELB",
+          "HealthCheckGracePeriod":             "900",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "4",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "HTTPS:443/",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "HTTPS",
+          "ELBListenerPort":                    "443",
+          "InstanceListenerProtocol":           "HTTPS",
+          "InstanceListenerPort":               "443",
+          "ELBListenerCert":                    "arn:aws:iam::6254927368126:server-certificate/exampleclient-wildcard",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "6",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdBackendAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdBackendAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.BackendSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdBackendELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdBackendELBAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.BackendELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "ProdEncryptionService": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "True",
+          "IsELBInternal":                      "True",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "encryption-service",
+          "Environment":                        "prod",
+          "InstanceType":                       "m3.medium",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "prod-encryption-service.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "EC2",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "4",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "TCP:3000",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "TCP",
+          "ELBListenerProtocol2":               "TCP",
+          "ELBListenerPort":                    "3000",
+          "ELBListenerPort2":                   "3443",
+          "InstanceListenerProtocol":           "TCP",
+          "InstanceListenerProtocol2":          "TCP",
+          "InstanceListenerPort":               "3000",
+          "InstanceListenerPort2":              "3443",
+          "ELBListenerCert":                    "",
+          "ELBListenerCert2":                   "",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "2",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdEncryptionServiceAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdEncryptionServiceAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.EncryptionServiceSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdEncryptionServiceELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdEncryptionServiceELBAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.EncryptionServiceELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "ProdAdmin": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "True",
+          "IsELBInternal":                      "False",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "admin",
+          "Environment":                        "prod",
+          "InstanceType":                       "t2.small",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "prod-admin.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "EC2",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "2",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "TCP:443",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "TCP",
+          "ELBListenerPort":                    "443",
+          "InstanceListenerProtocol":           "TCP",
+          "InstanceListenerPort":               "443",
+          "ELBListenerCert":                    "arn:aws:iam::6254927368126:server-certificate/exampleclient-wildcard",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "6",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdBackendAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdBackendAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.AdminSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdBackendELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdBackendELBAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.AdminELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "ProdI2CClient": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "False",
+          "IsELBInternal":                      "True",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "i2c-client",
+          "Environment":                        "prod",
+          "InstanceType":                       "m3.medium",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "prod-i2c-client.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "EC2",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "4",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "TCP:3000",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "TCP",
+          "ELBListenerProtocol2":               "TCP",
+          "ELBListenerPort":                    "3000",
+          "ELBListenerPort2":                   "443",
+          "InstanceListenerProtocol":           "TCP",
+          "InstanceListenerProtocol2":          "TCP",
+          "InstanceListenerPort":               "3000",
+          "InstanceListenerPort2":              "443",
+          "ELBListenerCert":                    "",
+          "ELBListenerCert2":                   "",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "2",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdI2CClientVPNAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdI2CClientVPNAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.I2CClientSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdI2CVPNELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdI2CVPNELBAz1Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.I2CClientELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "ProdISOAuthAZ1Ashburn": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/asg_and_elb_az1.json",
+        "Parameters": {
+          "IsELBInternal":                      "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "isoauth-ashburn",
+          "Environment":                        "prod",
+          "InstanceType":                       "m3.medium",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "prod-isoauth.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "EC2",
+          "HealthCheckGracePeriod":             "500",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "2",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "TCP:9001",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "TCP",
+          "ELBListenerProtocol2":               "TCP",
+          "ELBListenerPort":                    "9001",
+          "ELBListenerPort2":                   "9443",
+          "InstanceListenerProtocol":           "TCP",
+          "InstanceListenerProtocol2":          "TCP",
+          "InstanceListenerPort":               "9001",
+          "InstanceListenerPort2":              "9443",
+          "ELBListenerCert":                    "",
+          "ELBListenerCert2":                   "",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "6",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdIsoAuthVPNAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdIsoAuthVPNAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.ISOAuthSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdI2CVPNELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdI2CVPNELBAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.ISOAuthELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "ProdISOAuthAZ2Fremont": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/asg_and_elb_az2.json",
+        "Parameters": {
+          "IsELBInternal":                      "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "isoauth-fremont",
+          "Environment":                        "prod",
+          "InstanceType":                       "m3.medium",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "prod-isoauth.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "EC2",
+          "HealthCheckGracePeriod":             "500",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "2",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "TCP:9001",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "TCP",
+          "ELBListenerProtocol2":               "TCP",
+          "ELBListenerPort":                    "9001",
+          "ELBListenerPort2":                   "9443",
+          "InstanceListenerProtocol":           "TCP",
+          "InstanceListenerProtocol2":          "TCP",
+          "InstanceListenerPort":               "9001",
+          "InstanceListenerPort2":              "9443",
+          "ELBListenerCert":                    "",
+          "ELBListenerCert2":                   "",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "6",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdIsoAuthVPNAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdIsoAuthVPNAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.ISOAuthSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdI2CVPNELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.ProdI2CVPNELBAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.ISOAuthELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "ProdI2CSFTP": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "https://s3.amazonaws.com/exampleclient-cloudformation-us-west-1/asg_az1.json",
+        "Parameters": {
+          "Role":                               "sftp",
+          "Environment":                        "prod",
+          "InstanceType":                       "t2.small",
+          "AMI":                                "ami-0d09ee49",
+          "BootstrapFileName":                  "prod-sftp.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+          "ASGHealthCheckType":                 "EC2",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "4",
+          "MinInstancesCount":                  "1",
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdSftpVPNAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.ProdSftpVPNAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.I2CSFTPSecurityGroup" ] },
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "ProdElastiCache": { 
+       "Type": "AWS::CloudFormation::Stack",
+       "Properties": { 
+         "TemplateURL": { "Ref" : "ECacheCFNURL" }, 
+         "Parameters" : {
+           "Environment" :                      "prod",
+           "ECacheSubnet1" :                    { "Fn::GetAtt" : [ "Network", "Outputs.ProdCacheAz1Subnet" ] },
+           "ECacheSubnet2" :                    { "Fn::GetAtt" : [ "Network", "Outputs.ProdCacheAz2Subnet" ] },
+           "NodeSize" :                         "cache.t2.medium",
+           "ECacheVPCSecurityGroupIds" :        { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.ECacheSecurityGroup" ] },
+           "ECacheEngine" :                     "redis",
+           "NumberOfNodes" :                    "1", 
+           "Project" :                          { "Ref": "ProjectName" }
+         }
+       }
+     },
+
+    "StageIonic": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "True",
+          "IsELBInternal":                      "False",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "True",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "ionic",
+          "Environment":                        "stage",
+          "InstanceType":                       "m3.medium",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "stage-ionic.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "ELB",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "4",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "HTTP:80/",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "HTTP",
+          "ELBListenerProtocol2":               "HTTP",
+          "ELBListenerPort":                    "80",
+          "ELBListenerPort2":                   "443",
+          "InstanceListenerProtocol":           "HTTP",
+          "InstanceListenerProtocol2":          "HTTP",
+          "InstanceListenerPort":               "80",
+          "InstanceListenerPort2":              "443",
+          "ELBListenerCert":                    "",
+          "ELBListenerCert2":                   "arn:aws:iam::6254927368126:server-certificate/exampleclient-wildcard",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "2",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.StageIonicAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.StageIonicAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.IonicSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.StageIonicELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.StageIonicELBAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.IonicELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "StageEncryptionService": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "True",
+          "IsELBInternal":                      "True",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "encryption-service",
+          "Environment":                        "stage",
+          "InstanceType":                       "m3.medium",
+          "AMI":                                { "Fn::FindInMap" : [ "Region2AMI", { "Ref" : "AWS::Region" }, "64HVMGP2"] },
+          "BootstrapFileName":                  "stage-encryption-service.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "EC2",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "4",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "TCP:3000",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "TCP",
+          "ELBListenerProtocol2":               "TCP",
+          "ELBListenerPort":                    "3000",
+          "ELBListenerPort2":                   "3443",
+          "InstanceListenerProtocol":           "TCP",
+          "InstanceListenerProtocol2":          "TCP",
+          "InstanceListenerPort":               "3000",
+          "InstanceListenerPort2":              "3443",
+          "ELBListenerCert":                    "",
+          "ELBListenerCert2":                   "",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "2",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.StageEncryptionServiceAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.StageEncryptionServiceAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.EncryptionServiceSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.StageEncryptionServiceELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.StageEncryptionServiceELBAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.EncryptionServiceELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "StageBackend": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "True",
+          "IsELBInternal":                      "False",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "backend",
+          "Environment":                        "stage",
+          "InstanceType":                       "m3.medium",
+          "AMI":                                "ami-93f21fd7",
+          "BootstrapFileName":                  "stage-backend.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "gp2",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "EC2",
+          "HealthCheckGracePeriod":             "900",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "4",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "HTTPS:443/",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "HTTPS",
+          "ELBListenerPort":                    "443",
+          "InstanceListenerProtocol":           "HTTPS",
+          "InstanceListenerPort":               "443",
+          "ELBListenerCert":                    "arn:aws:iam::6254927368126:server-certificate/exampleclient-wildcard",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "6",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.StageBackendAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.StageBackendAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.BackendSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.StageBackendELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.StageBackendELBAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.BackendELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "StageI2CClient": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "False",
+          "IsELBInternal":                      "True",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "i2c-client",
+          "Environment":                        "stage",
+          "InstanceType":                       "m3.medium",
+          "AMI":                                "ami-93f21fd7",
+          "BootstrapFileName":                  "stage-i2c-client.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "EC2",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "4",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "TCP:3000",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "TCP",
+          "ELBListenerProtocol2":               "TCP",
+          "ELBListenerPort":                    "3000",
+          "ELBListenerPort2":                   "443",
+          "InstanceListenerProtocol":           "TCP",
+          "InstanceListenerProtocol2":          "TCP",
+          "InstanceListenerPort":               "3000",
+          "InstanceListenerPort2":              "443",
+          "ELBListenerCert":                    "",
+          "ELBListenerCert2":                   "",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "2",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.StageI2CVPNAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.StageI2CVPNAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.I2CClientSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.StageI2CVPNELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.StageI2CVPNELBAz1Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.I2CClientELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    },
+
+    "StageAdmin": {
+      "DependsOn": [ "SaltMaster" ],
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": { "Ref": "ASGwithELBCFNURL" },
+        "Parameters": {
+          "IsMultiAZStack":                     "True",
+          "IsELBInternal":                      "False",
+          "IsELBCrossZone":                     "True",
+          "UseELBCookieStickinessPolicy":       "False",
+          "ELBStickySessionLength":             "60",
+          "Role":                               "admin",
+          "Environment":                        "stage",
+          "InstanceType":                       "t2.small",
+          "AMI":                                "ami-93f21fd7",
+          "BootstrapFileName":                  "stage-admin.sh",
+          "AssociatePublicIPAddress":           "False",
+          "RootEBSVolumeSize":                  "10",
+          "EBSVolumeType":                      "standard",
+          "DeleteEBSVolumesOnTermination":      "True",
+
+          "ASGHealthCheckType":                 "EC2",
+          "HealthCheckGracePeriod":             "300",
+          "DesiredInstancesCount":              "1",
+          "MaxInstancesCount":                  "2",
+          "MinInstancesCount":                  "1",
+          "ScaleUpAdjustment":                  "1",
+          "ScaleUpCooldown":                    "300",
+          "ScaleDownAdjustment":                "-1",
+          "ScaleDownCooldown":                  "300",
+
+          "HighCPUThreshold":                   "200",
+          "HighCPUPeriod":                      "60",
+          "LowCPUThreshold":                    "10",
+          "LowCPUPeriod":                       "60",
+
+          "RollingUpdateMinInstancesInService": "1",
+          "RollingUpdateMaxBatchSize":          "1",
+          "RollingUpdatePauseTime":             "PT0M30S",
+
+          "HealthCheckTarget":                  "TCP:443",
+          "ELBConnectionDrainingTimeout":       "120",
+          "ELBListenerProtocol":                "TCP",
+          "ELBListenerPort":                    "443",
+          "InstanceListenerProtocol":           "TCP",
+          "InstanceListenerPort":               "443",
+          "ELBListenerCert":                    "arn:aws:iam::6254927368126:server-certificate/exampleclient-wildcard",
+          "ELBHealthyThreshold":                "2",
+          "ELBUnhealthyThreshold":              "6",
+          "ELBIntervalThreshold":               "10",
+          "ELBTimeoutThreshold":                "5",
+          "High500sThreshold":                  "500",
+          "High500sPeriod":                     "60",
+
+          "IAMInstanceProfile":                 { "Fn::GetAtt" : [ "IAM", "Outputs.CommonInstanceProfile" ] },
+          "InstanceSubnetAZ1":                  { "Fn::GetAtt" : [ "Network", "Outputs.StageBackendAz1Subnet" ] },
+          "InstanceSubnetAZ2":                  { "Fn::GetAtt" : [ "Network", "Outputs.StageBackendAz2Subnet" ] },
+          "InstanceSecurityGroups":             { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.AdminSecurityGroup" ] },
+          "ELBSubnetAZ1":                       { "Fn::GetAtt" : [ "Network", "Outputs.StageBackendELBAz1Subnet" ] },
+          "ELBSubnetAZ2":                       { "Fn::GetAtt" : [ "Network", "Outputs.StageBackendELBAz2Subnet" ] },
+          "ELBSecurityGroups":                  { "Fn::GetAtt" : [ "SecurityGroups", "Outputs.AdminELBSecurityGroup" ] },
+
+          "CloudWatchAlarmSNSTopic":            { "Fn::GetAtt" : [ "SNS", "Outputs.Primary" ] },
+          "EC2KeyPair":                         { "Ref": "CommonKey" },
+          "BootstrapS3BucketName":              { "Ref": "BootstrapBucket" },
+          "ProjectName":                        { "Ref": "ProjectName" }
+        }
+      }
+    }
+
+
+  },
+
+  "Outputs" : {
+  }
+
+}
+
