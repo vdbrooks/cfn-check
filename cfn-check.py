@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-import json
-import requests
+import json, sys
+import requests, pprint
 import boto3
 
 template_file = open('top.json')
@@ -15,7 +15,11 @@ for resource in template['Resources']:
     try:
         if template['Resources'][resource]['Type'] == aws_type:
             health_type = template['Resources'][resource]['Properties']['Parameters']['ASGHealthCheckType']
+            print "RESOURCE: " + str(pprint.pprint(template['Resources'][resource])) + "\n"
+            print "HEALTH CHECK TYPE: " + str(health_type)
+            print "\n" + str(resource)
     except KeyError, ke:
-        print "ran into an error: " + str(ke)
-        sys.exit(1)
+        print "RESOURCE: " + str(pprint.pprint(template['Resources'][resource])) + "\n"
+        print "ERROR: " + "ASGHealthCheckType is not defined in this stack"
+        pass
 
