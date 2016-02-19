@@ -1,0 +1,10 @@
+{
+  "config": {
+    "tests": [
+      "health-check",
+      "scaling-policies",
+      "ip-space",
+      "scaling"
+    ]
+  }
+}
