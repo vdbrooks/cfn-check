@@ -13,13 +13,16 @@ aws_type = 'AWS::CloudFormation::Stack'
 for resource in template['Resources']:
     health_type = ''
     try:
+        print ""
         if template['Resources'][resource]['Type'] == aws_type:
             health_type = template['Resources'][resource]['Properties']['Parameters']['ASGHealthCheckType']
-            print "RESOURCE: " + str(pprint.pprint(template['Resources'][resource])) + "\n"
+            print "RESOURCE: " + str(resource) 
             print "HEALTH CHECK TYPE: " + str(health_type)
-            print "\n" + str(resource)
+            print ""
+            
     except KeyError, ke:
-        print "RESOURCE: " + str(pprint.pprint(template['Resources'][resource])) + "\n"
+        print "RESOURCE: " + str(resource) 
         print "ERROR: " + "ASGHealthCheckType is not defined in this stack"
+        print ""
         pass
 
