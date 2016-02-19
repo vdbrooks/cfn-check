@@ -16,6 +16,6 @@ for resource in template['Resources']:
         if template['Resources'][resource]['Type'] == aws_type:
             health_type = template['Resources'][resource]['Properties']['Parameters']['ASGHealthCheckType']
     except KeyError, ke:
-        print "ran into an error: " + ke
+        print "ran into an error: " + str(ke)
         sys.exit(1)
 
